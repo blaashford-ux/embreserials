@@ -1,0 +1,30 @@
+# Flutter
+**/android/local.properties
+**/android/.gradle
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/*.iml
+**/GeneratedPluginRegistrant.java
+
+# Next.js
+**/node_modules/
+**/.next/
+**/out/
+
+# Secrets -- never commit
+**/.env.local
+**/.env*.local
+
+# IDEs
+.idea/
+.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase local dev
+.supabase/
