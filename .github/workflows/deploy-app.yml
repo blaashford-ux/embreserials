@@ -1,0 +1,51 @@
+name: Deploy App (Flutter Web)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'app/**'
+      - '.github/workflows/deploy-app.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Build Flutter Web
+        working-directory: app
+        run: flutter build web --release
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No package.json in app/ -- wrangler is fetched ad hoc via npx.
+      # This is the documented pattern for deploying static assets from
+      # a non-Node project and works fine, just slightly slower per run.
+      - name: Deploy to Cloudflare (production)
+        if: github.ref == 'refs/heads/main'
+        working-directory: app
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy to Cloudflare (dev preview)
+        if: github.ref == 'refs/heads/develop'
+        working-directory: app
+        run: npx wrangler deploy --env dev
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

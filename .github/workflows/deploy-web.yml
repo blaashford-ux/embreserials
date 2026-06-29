@@ -1,0 +1,58 @@
+name: Deploy Web (Next.js)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Build and deploy MUST be chained in one command. Bare `wrangler deploy`
+      # auto-detects OpenNext and delegates to `opennextjs-cloudflare deploy`,
+      # which does NOT run the build itself -- it expects .open-next/ to
+      # already exist from a build in the same command chain. A separate
+      # prior build step does not reliably satisfy it (confirmed in
+      # cloudflare/workers-sdk#13134 -- this bit people on Linux CI too,
+      # not just Windows).
+      - name: Build and deploy to Cloudflare (production)
+        if: github.ref == 'refs/heads/main'
+        run: npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Build and deploy to Cloudflare (dev preview)
+        if: github.ref == 'refs/heads/develop'
+        run: npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Targets the [env.dev] block in wrangler.jsonc. Set as an env var
+          # rather than a CLI flag since it needs to propagate through the
+          # nested wrangler invocation that opennextjs-cloudflare deploy
+          # shells out to internally.
+          CLOUDFLARE_ENV: dev
