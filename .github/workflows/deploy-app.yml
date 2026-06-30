@@ -2,7 +2,7 @@ name: Deploy App (Flutter Web)
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, develop]
     paths:
       - 'app/**'
       - '.github/workflows/deploy-app.yml'
@@ -35,7 +35,7 @@ jobs:
       # This is the documented pattern for deploying static assets from
       # a non-Node project and works fine, just slightly slower per run.
       - name: Deploy to Cloudflare (production)
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         working-directory: app
         run: npx wrangler deploy
         env:
